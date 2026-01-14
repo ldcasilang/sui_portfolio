@@ -1,0 +1,382 @@
+/* Custom font - MUST BE FIRST */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* Then DApp Kit CSS */
+@import '@mysten/dapp-kit/dist/index.css';
+@import 'react-toastify/dist/ReactToastify.css';
+
+/* Then Tailwind */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========== BASE STYLES ========== */
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Inter", sans-serif;
+  }
+
+  body {
+    @apply bg-sui-dark text-white font-inter;
+    background: #0C1422;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* ========== CUSTOM COMPONENTS ========== */
+@layer components {
+  /* Hero Section */
+  .hero-wrapper {
+    @apply bg-hero-gradient pt-24 pb-24 px-4;
+  }
+
+  .hero {
+    @apply max-w-[1100px] mx-auto p-10 bg-hero-card rounded-custom-28 border-2 border-sui-border flex flex-col md:flex-row items-center gap-10;
+  }
+
+  .avatar {
+    @apply w-48 h-48 rounded-full bg-white p-2 shadow-avatar-glow flex-shrink-0;
+  }
+
+  .avatar img {
+    @apply w-full h-full rounded-full object-cover block;
+  }
+
+  .hero-content small {
+    @apply text-[#8F939A] block text-base mb-1;
+  }
+
+  .gradient-name {
+    @apply text-sui-64 font-extrabold leading-tight mb-2 bg-name-gradient bg-clip-text text-transparent text-left;
+  }
+
+  .degree {
+    @apply font-bold text-sui-20 text-sui-light-blue;
+  }
+
+  /* Social Links */
+  .socials a {
+    @apply inline-flex items-center gap-2 px-[18px] py-2.5 rounded-custom-12 bg-sui-card text-sui-light-blue border border-sui-skill hover:bg-sui-skill hover:text-white transition-all duration-300;
+  }
+
+  /* About Me & Skills Section */
+  .solid-section {
+    @apply max-w-[1100px] mx-auto my-12 p-10 bg-sui-dark rounded-custom-24;
+  }
+
+  .section-title {
+    @apply text-[#60a5fa] mb-5 text-2xl font-semibold relative;
+  }
+
+  .section-title::after {
+    content: '';
+    @apply block w-32 h-1.5 rounded-full bg-title-line mt-3;
+  }
+
+  .solid-section p {
+    @apply text-white text-sui-20 opacity-85 mb-8 leading-relaxed max-w-[700px];
+  }
+
+  .skills {
+    @apply flex flex-wrap gap-5 mt-8;
+  }
+
+  .skill {
+    @apply px-6 py-3.5 rounded-custom-14 border border-sui-skill bg-sui-dark text-sui-light-blue hover:bg-sui-skill hover:text-white hover:-translate-y-1 transition-all duration-300 cursor-pointer text-sui-16;
+  }
+
+  /* Move Smart Contracts Section */
+  .move-wrapper {
+    @apply bg-hero-gradient pt-20 pb-10 px-4;
+  }
+
+  .move-card {
+    @apply max-w-[1100px] mx-auto p-10 bg-move-gradient rounded-custom-26 border-2 border-sui-border flex flex-col gap-5;
+  }
+
+  .move-title {
+    @apply flex items-center gap-4;
+  }
+
+  .move-logo {
+    @apply h-12 w-auto max-w-12 object-contain;
+  }
+
+  .move-title strong {
+    @apply text-sui-48 font-extrabold bg-name-gradient bg-clip-text text-transparent;
+  }
+
+  .move-card p {
+    @apply text-white text-sui-20 opacity-85 leading-relaxed;
+  }
+
+  .learn-more-btn {
+    @apply inline-block px-5 py-3 rounded-custom-14 border border-sui-skill bg-transparent text-[#60a5fa] hover:bg-sui-skill hover:text-white transition-all duration-300 text-sui-16 w-fit;
+  }
+
+  /* Footer */
+  .move-footer {
+    @apply text-center mt-14 opacity-70 text-sui-14 max-w-[1100px] mx-auto px-4;
+  }
+
+  .move-footer p {
+    @apply leading-loose;
+  }
+
+  .custom-footer {
+    @apply bg-sui-dark py-8 px-4;
+  }
+
+  .footer-container {
+    @apply max-w-[1100px] mx-auto flex flex-col md:flex-row justify-between items-center gap-6;
+  }
+
+  .footer-logos {
+    @apply flex items-center gap-8;
+  }
+
+  .logo-img {
+    @apply h-10 w-auto max-w-[120px] object-contain;
+  }
+
+  .project-id {
+    @apply text-sui-light-blue font-mono text-sui-14 bg-slate-900/50 px-4 py-2.5 rounded-lg border border-gray-800 text-center md:text-right;
+  }
+
+  /* Wallet Components */
+  .wallet-connected-badge {
+    @apply flex items-center gap-3;
+  }
+
+  .wallet-connected-badge .dot {
+    @apply w-3 h-3 bg-green-500 rounded-full animate-pulse;
+  }
+
+  .wallet-address {
+    @apply text-gray-400 text-sm font-mono;
+  }
+
+  .edit-portfolio-btn {
+    @apply mt-3 px-4 py-2 rounded-lg bg-gradient-to-r from-sui-blue to-blue-700 text-white text-sm font-medium hover:from-blue-700 hover:to-sui-blue transition-all;
+  }
+
+  /* Admin Components */
+  .admin-card {
+    @apply max-w-4xl mx-auto bg-slate-900 rounded-custom-28 p-8 shadow-2xl border border-gray-800;
+  }
+
+  .form-input {
+    @apply w-full p-4 bg-sui-dark border border-gray-700 rounded-custom-14 text-white placeholder-gray-500 focus:border-sui-blue focus:outline-none;
+  }
+
+  .btn-primary {
+    @apply px-5 py-3 rounded-custom-14 border border-sui-skill bg-transparent text-sui-light-blue hover:bg-sui-skill hover:text-white transition-all duration-300 text-sui-16;
+  }
+
+  .btn-gradient {
+    @apply px-6 py-3 rounded-custom-14 bg-gradient-to-r from-sui-blue to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-sui-blue transition-all duration-300;
+  }
+}
+
+/* ========== UTILITY CLASSES ========== */
+.text-shadow {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.opacity-85 {
+  opacity: 0.85;
+}
+
+/* ========== CUSTOM SCROLLBAR ========== */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-900;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-sui-blue rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-blue-600;
+}
+
+/* ========== ANIMATIONS ========== */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.float-animation {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(54, 146, 254, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(54, 146, 254, 0.8);
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* ========== RESPONSIVE DESIGN ========== */
+@media (max-width: 900px) {
+  .hero {
+    @apply flex-col text-center gap-8;
+  }
+  
+  .gradient-name {
+    @apply text-5xl text-center;
+  }
+  
+  .hero-content {
+    @apply text-center;
+  }
+  
+  .hero-content h1 {
+    @apply text-center;
+  }
+  
+  .hero-content p {
+    @apply text-lg text-center;
+  }
+  
+  .socials {
+    @apply justify-center flex flex-wrap gap-4;
+  }
+  
+  .socials a {
+    @apply mr-0;
+  }
+  
+  .move-title strong {
+    @apply text-4xl;
+  }
+  
+  .move-card p {
+    @apply text-lg;
+  }
+  
+  .footer-container {
+    @apply flex-col text-center gap-6;
+  }
+}
+
+@media (max-width: 600px) {
+  .gradient-name {
+    @apply text-4xl;
+  }
+  
+  .hero-content h1 {
+    @apply text-center;
+  }
+  
+  .move-title strong {
+    @apply text-3xl;
+  }
+  
+  .move-title {
+    @apply flex-col items-start gap-3;
+  }
+  
+  .solid-section p {
+    @apply text-lg;
+  }
+  
+  .footer-logos {
+    @apply flex-col gap-4;
+  }
+  
+  .skill {
+    @apply px-4 py-3 text-sm;
+  }
+}
+
+@media (max-width: 400px) {
+  .socials {
+    @apply flex-col items-center gap-3;
+  }
+  
+  .socials a {
+    @apply w-48 justify-center;
+  }
+  
+  .gradient-name {
+    @apply text-3xl;
+  }
+}
+
+/* ========== TOASTIFY OVERRIDES ========== */
+.Toastify__toast {
+  @apply font-inter rounded-lg;
+}
+
+.Toastify__toast--success {
+  @apply bg-green-900 text-white;
+}
+
+.Toastify__toast--error {
+  @apply bg-red-900 text-white;
+}
+
+.Toastify__toast--info {
+  @apply bg-blue-900 text-white;
+}
+
+/* ========== DAPP-KIT OVERRIDES ========== */
+[data-radix-popper-content-wrapper] {
+  @apply font-inter;
+}
+
+/* ========== FORM STYLES ========== */
+input:focus, textarea:focus, select:focus {
+  @apply outline-none ring-2 ring-sui-blue ring-opacity-50;
+}
+
+/* ========== IMAGE FALLBACKS ========== */
+img {
+  @apply max-w-full h-auto;
+}
+
+/* ========== SELECTION STYLES ========== */
+::selection {
+  @apply bg-sui-blue text-white;
+}
+
+::-moz-selection {
+  @apply bg-sui-blue text-white;
+}
+
+/* ========== WALLET TOAST SUPPRESSION ========== */
+/* Hide the wallet detection toast from @mysten/dapp-kit */
+.Toastify__toast--error {
+  /* Check for wallet detection messages and hide them */
+}
+
+/* Optional: Add a specific selector if needed */
+.Toastify__toast-body {
+  /* If you want to be more specific */
+}
+
+/* Hide specific error messages related to wallet detection */
+.Toastify__toast[data-testid*="wallet"] {
+  display: none !important;
+}
