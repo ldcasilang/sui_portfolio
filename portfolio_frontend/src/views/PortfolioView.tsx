@@ -18,14 +18,14 @@ const defaultPortfolioData = {
   github: "https://github.com/ldcasilang"
 }
 
-// Your published Move package ID (replace with your actual package ID)
-// This is the Object ID you get when you publish: sui client publish --gas-budget 10000000
-const PUBLISHED_PACKAGE_ID = "0xYOUR_PACKAGE_ID_HERE" // Replace with your actual package ID
+// Your published Move package ID
+const PUBLISHED_PACKAGE_ID = "0xYOUR_PACKAGE_ID_HERE"
 
 const PortfolioView = () => {
   const account = useCurrentAccount()
   const [portfolioData, setPortfolioData] = useState(defaultPortfolioData)
-  const [views, setViews] = useState(500)
+  const [viewCount, setViewCount] = useState<number>(0)
+  const [loadingViews, setLoadingViews] = useState(true)
   const [projectId, setProjectId] = useState(PUBLISHED_PACKAGE_ID)
 
   // Fetch SUI balance
@@ -39,7 +39,7 @@ const PortfolioView = () => {
     }
   )
 
-  // Try to fetch package info if we have a package ID
+  // Try to fetch package info
   const { data: packageData } = useSuiClientQuery(
     "getObject",
     {
@@ -56,23 +56,56 @@ const PortfolioView = () => {
     }
   )
 
+  // Clean view counter starting at 0
   useEffect(() => {
-    const script = document.createElement("script")
-    script.src = "https://counter.websiteout.com/js/36/0/0/0"
-    script.async = true
-
-    const counterDiv = document.getElementById("web-counter")
-    if (counterDiv && !counterDiv.hasChildNodes()) {
-      counterDiv.appendChild(script)
+    const updateViewCount = () => {
+      // Clear any old data
+      const OLD_KEYS = [
+        'portfolioViewCount',
+        'portfolio_views',
+        'portfolio_visit_session',
+        'portfolioViews'
+      ]
+      
+      OLD_KEYS.forEach(key => {
+        localStorage.removeItem(key)
+        sessionStorage.removeItem(key)
+      })
+      
+      // Use new storage key
+      const STORAGE_KEY = 'ldcasilang_view_count'
+      const SESSION_KEY = 'ldcasilang_session'
+      
+      // Check if first visit in this session
+      const hasVisited = sessionStorage.getItem(SESSION_KEY)
+      
+      if (!hasVisited) {
+        // First visit - increment
+        const currentCount = parseInt(localStorage.getItem(STORAGE_KEY) || '0')
+        const newCount = currentCount + 1
+        
+        // Save to localStorage
+        localStorage.setItem(STORAGE_KEY, newCount.toString())
+        
+        // Mark session
+        sessionStorage.setItem(SESSION_KEY, 'true')
+        
+        // Update state
+        setViewCount(newCount)
+      } else {
+        // Refresh - just get current count
+        const currentCount = parseInt(localStorage.getItem(STORAGE_KEY) || '0')
+        setViewCount(currentCount)
+      }
+      
+      setLoadingViews(false)
     }
-
-    return () => {
-      script.remove()
-    }
+    
+    updateViewCount()
   }, [])
 
   useEffect(() => {
-    // Load data from localStorage first
+    // Load data from localStorage
     const savedData = localStorage.getItem('portfolioData')
     if (savedData) {
       try {
@@ -81,7 +114,6 @@ const PortfolioView = () => {
           ...prev,
           ...data,
           name: data.name?.toUpperCase() || prev.name,
-          // Keep LinkedIn and GitHub URLs from defaults if not saved
           linkedin: data.linkedin || prev.linkedin,
           github: data.github || prev.github
         }))
@@ -90,33 +122,19 @@ const PortfolioView = () => {
       }
     }
 
-    // Increment views on load
-    setViews(prev => prev + 1)
-
-    // Check if package is published by looking at the response
+    // Check package
     if (packageData && packageData.error) {
-      // Package not found or invalid
       setProjectId("Not Published Yet")
-    } else if (packageData) {
-      // Package exists on chain
-      console.log("Package found:", packageData)
     }
   }, [packageData])
 
-  // Format package ID for display
+  // Format project ID
   const formatProjectId = (id: string) => {
     if (!id || id === "0xYOUR_PACKAGE_ID_HERE") {
       return "Not Published Yet"
     }
     if (id === "Not Published Yet") return id
-    // Show first 8 and last 6 characters for long IDs
     return `${id.slice(0, 10)}...${id.slice(-6)}`
-  }
-
-  // Convert MIST to SUI
-  const getSuiBalance = () => {
-    if (!balanceData) return "0"
-    return (Number(balanceData.totalBalance) / 1_000_000_000).toFixed(2)
   }
 
   return (
@@ -145,7 +163,6 @@ const PortfolioView = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="social-btn"
-                title="Visit my LinkedIn profile"
               >
                 <i className="fa-brands fa-linkedin"></i> LinkedIn
               </a>
@@ -154,7 +171,6 @@ const PortfolioView = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="social-btn"
-                title="Visit my GitHub profile"
               >
                 <i className="fa-brands fa-github"></i> GitHub
               </a>
@@ -180,7 +196,6 @@ const PortfolioView = () => {
 
       {/* MOVE SMART CONTRACTS SECTION */}
       <div className="move-wrapper">
-        {/* Card */}
         <div className="move-card">
           <div className="move-title">
             <img src="/sui-logo.png" alt="Move Logo" className="move-logo" />
@@ -188,7 +203,7 @@ const PortfolioView = () => {
           </div>
 
           <p>
-            Move smart contracts are programs written in the Move language and deployed on blockchains like Sui, enabling secure asset management and high scalability. As a secure and efficient language designed for apps that scale, Move ushers in a new era of smart contract programming by offering significant advancements in security and productivity. Move drastically reduces the Web3 learning curve and enables a developer experience of unprecedented ease, serving as the foundation for Sui, a high-performance Layer 1 blockchain that utilizes an object-centric data model to achieve industry-leading transaction speeds.
+            Move smart contracts are programs written in the Move language and deployed on blockchains like Sui, enabling secure asset management and high scalability.
           </p>
 
           <a href="https://www.sui.io/move" target="_blank" className="learn-more-btn" rel="noopener noreferrer">
@@ -196,7 +211,6 @@ const PortfolioView = () => {
           </a>
         </div>
 
-        {/* Footer-like info below the card */}
         <div className="move-footer">
           <p>
             Portfolio project published during Move Smart Contracts Code Camp<br />
@@ -205,7 +219,7 @@ const PortfolioView = () => {
         </div>
       </div>
 
-      {/* NEW FOOTER WITH LOGOS AND PROJECT ID */}
+      {/* FOOTER */}
       <div className="custom-footer">
         <div className="footer-container">
           <div className="footer-logos">
@@ -213,34 +227,25 @@ const PortfolioView = () => {
             <img src="/sui.png" alt="SUI" className="logo-img" />
           </div>
           
-          {/* Project ID and View Count moved to the right */}
           <div className="footer-right-section">
             <div className="footer-info-container">
-              {/* Project ID Box - Shows actual Package ID */}
+              {/* Project ID */}
               <div className="info-box">
                 <div className="info-label">PROJECT ID:</div>
                 <div className="info-value" title={projectId}>
                   {formatProjectId(projectId)}
                 </div>
-                {projectId && projectId !== "Not Published Yet" && projectId !== "0xYOUR_PACKAGE_ID_HERE" && (
-                  <div className="info-subtext">
-                    <a 
-                      href={`https://suiscan.xyz/mainnet/object/${projectId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="view-on-explorer"
-                    >
-                      View on Explorer
-                    </a>
-                  </div>
-                )}
               </div>
               
-              {/* View Count Box */}
+              {/* VIEW COUNT - Clean and working */}
               <div className="info-box">
                 <div className="info-label">VIEW COUNT:</div>
                 <div className="info-value">
-                  <div id="web-counter"></div>
+                  {loadingViews ? (
+                    <span className="loading">...</span>
+                  ) : (
+                    viewCount.toLocaleString()
+                  )}
                 </div>
               </div>
             </div>
@@ -248,9 +253,9 @@ const PortfolioView = () => {
         </div>
       </div>
 
-      {/* Floating Connect Wallet Prompt - Only show if NOT connected */}
+      {/* Connect Wallet Prompt */}
       {!account && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in duration-300">
+        <div className="fixed bottom-6 right-6 z-50">
           <div className="bg-slate-900/90 backdrop-blur-sm p-4 rounded-2xl border border-sui-blue shadow-2xl max-w-sm">
             <div className="flex items-start gap-3">
               <div className="text-sui-blue text-xl">
@@ -259,16 +264,8 @@ const PortfolioView = () => {
               <div className="flex-1">
                 <h4 className="font-semibold text-white mb-1">Edit Your Portfolio</h4>
                 <p className="text-gray-300 text-sm mb-3">
-                  Connect your Sui wallet to customize your portfolio on the blockchain
+                  Connect your Sui wallet to customize your portfolio
                 </p>
-                {projectId === "Not Published Yet" && (
-                  <div className="mt-2 p-2 bg-yellow-900/30 rounded border border-yellow-700">
-                    <p className="text-xs text-yellow-300">
-                      <i className="fas fa-exclamation-triangle mr-1"></i>
-                      Publish your Move package to get a real Project ID
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -276,7 +273,7 @@ const PortfolioView = () => {
       )}
 
       <style>{`
-        /* Socials styling */
+        /* Socials */
         .socials {
           display: flex;
           gap: 1rem;
@@ -296,21 +293,18 @@ const PortfolioView = () => {
           border: 1px solid #1e40af;
           transition: 0.3s;
           font-weight: 500;
-          cursor: pointer;
         }
         
         .social-btn:hover {
           background: #1e40af;
           color: #fff;
-          text-decoration: none;
         }
         
-        /* FontAwesome icons styling */
         .social-btn i {
           font-size: 1.1rem;
         }
 
-        /* Footer Container */
+        /* Footer */
         .footer-container {
           display: flex;
           justify-content: space-between;
@@ -320,7 +314,6 @@ const PortfolioView = () => {
           gap: 20px;
         }
 
-        /* Right Section - Project ID & View Count */
         .footer-right-section {
           display: flex;
           flex-direction: column;
@@ -328,7 +321,6 @@ const PortfolioView = () => {
           margin-left: auto;
         }
 
-        /* Footer Info Container */
         .footer-info-container {
           display: flex;
           gap: 20px;
@@ -336,64 +328,41 @@ const PortfolioView = () => {
           align-items: flex-start;
         }
 
-        /* Info Box Styling */
+        /* Info Boxes */
         .info-box {
-          background: rgba(11, 27, 58, 0.8);
+          background: rgba(11, 27, 58, 0.9);
           border: 1px solid #1e40af;
           border-radius: 8px;
           padding: 12px 16px;
           min-width: 180px;
           text-align: center;
-          position: relative;
         }
 
         .info-label {
           font-size: 0.8rem;
           color: #93c5fd;
           font-weight: 600;
-          margin-bottom: 4px;
+          margin-bottom: 6px;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
         }
 
         .info-value {
-          font-size: 0.9rem;
+          font-size: 0.95rem;
           color: white;
           font-family: monospace;
-          word-break: break-all;
-          cursor: default;
+          font-weight: 500;
         }
 
-        .info-subtext {
-          margin-top: 6px;
-          font-size: 0.7rem;
+        .loading {
+          color: #93c5fd;
+          animation: pulse 1.5s infinite;
         }
 
-        .view-on-explorer {
-          color: #60a5fa;
-          text-decoration: none;
-          font-size: 0.75rem;
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
         }
 
-        .view-on-explorer:hover {
-          text-decoration: underline;
-        }
-
-        /* Counter widget styling */
-        #web-counter {
-          font-size: 0.9rem;
-          color: white;
-          font-family: monospace;
-          display: inline-block;
-        }
-
-        #web-counter img {
-          max-height: 20px;
-          border: none !important;
-          background: transparent !important;
-        }
-
-        /* Move footer text styling */
         .move-footer {
           text-align: center;
           margin-top: 30px;
@@ -407,12 +376,11 @@ const PortfolioView = () => {
           margin: 0;
         }
         
-        /* Responsive styles */
+        /* Responsive */
         @media (max-width: 768px) {
           .footer-container {
             flex-direction: column;
             align-items: center;
-            text-align: center;
           }
           
           .footer-right-section {
@@ -428,7 +396,6 @@ const PortfolioView = () => {
           
           .socials {
             justify-content: center;
-            gap: 15px;
           }
         }
         
@@ -436,7 +403,6 @@ const PortfolioView = () => {
           .socials {
             flex-direction: column;
             align-items: center;
-            gap: 12px;
           }
           
           .social-btn {
