@@ -93,7 +93,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
           
           <div className="flex items-center gap-4">
             {/* Show "Back to Portfolio" button when on admin page */}
-            {location.pathname === '/admin' && (
+            {location.pathname === '/cms-admin' && (
               <button
                 onClick={handleBackToPortfolio}
                 className="px-5 py-3 rounded-xl bg-gradient-to-r from-gray-700 to-gray-800 text-white font-semibold hover:from-gray-800 hover:to-gray-700 transition-all"
@@ -103,7 +103,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
             )}
             
             {/* Show Connect Wallet button only on admin page */}
-            {location.pathname === '/admin' && (
+            {location.pathname === '/cms-admin' && (
               <ConnectButton 
                 connectText="Connect Wallet"
                 className="!bg-gradient-to-r !from-sui-blue !to-blue-700 !text-white !font-semibold !rounded-xl !px-5 !py-3 hover:!from-blue-700 hover:!to-sui-blue transition-all"
@@ -114,7 +114,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
       </header>
 
       {/* Wallet Status Banner - Only show on admin page when connected */}
-      {account && location.pathname === '/admin' && (
+      {account && location.pathname === '/cms-admin' && (
         <div className="bg-green-900/20 border-l-4 border-green-500 p-3">
           <div className="max-w-[1100px] mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -204,7 +204,7 @@ function App() {
             <PortfolioView />
           </MainLayout>
         } />
-        <Route path="/admin" element={
+        <Route path="/cms-admin" element={
           <PasswordProtection password="Movecodecampexercise!">
             <MainLayout>
               <AdminView />
