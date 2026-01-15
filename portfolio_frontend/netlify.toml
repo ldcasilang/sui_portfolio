@@ -1,0 +1,10 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# THIS IS THE ONLY LINE YOU NEED
+# It makes all routes work on Netlify
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
