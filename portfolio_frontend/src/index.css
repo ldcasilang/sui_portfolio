@@ -10,6 +10,44 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ========== WALLET TOAST FILTER ========== */
+/* Hide wallet connection toasts */
+.wallet-toast-hidden {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Target specific wallet error messages */
+.Toastify__toast[aria-label*="wallet"],
+.Toastify__toast[aria-label*="Wallet"],
+.Toastify__toast[aria-label*="connect"],
+.Toastify__toast[aria-label*="Connect"],
+.Toastify__toast[aria-label*="disconnect"],
+.Toastify__toast[aria-label*="Disconnect"],
+.Toastify__toast[aria-label*="failed"],
+.Toastify__toast[aria-label*="Failed"],
+.Toastify__toast[aria-label*="error"] {
+  display: none !important;
+}
+
+/* Hide toast body containing wallet keywords */
+.Toastify__toast-body:contains("wallet"),
+.Toastify__toast-body:contains("Wallet"),
+.Toastify__toast-body:contains("connect"),
+.Toastify__toast-body:contains("Connect"),
+.Toastify__toast-body:contains("No wallet"),
+.Toastify__toast-body:contains("no wallet"),
+.Toastify__toast-body:contains("failed"),
+.Toastify__toast-body:contains("Failed") {
+  display: none !important;
+}
+
 /* ========== BASE STYLES ========== */
 @layer base {
   * {
@@ -363,20 +401,4 @@ img {
 
 ::-moz-selection {
   @apply bg-sui-blue text-white;
-}
-
-/* ========== WALLET TOAST SUPPRESSION ========== */
-/* Hide the wallet detection toast from @mysten/dapp-kit */
-.Toastify__toast--error {
-  /* Check for wallet detection messages and hide them */
-}
-
-/* Optional: Add a specific selector if needed */
-.Toastify__toast-body {
-  /* If you want to be more specific */
-}
-
-/* Hide specific error messages related to wallet detection */
-.Toastify__toast[data-testid*="wallet"] {
-  display: none !important;
 }

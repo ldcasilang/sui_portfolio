@@ -184,7 +184,9 @@ const AdminView = () => {
           
           {!account && (
             <div className="mt-4 p-4 bg-yellow-900/30 rounded-xl border border-yellow-800">
-              <p className="text-yellow-300">⚠️ Connect your Sui wallet to save changes</p>
+              <p className="text-yellow-300">
+                ⚠️ Connect your Sui wallet using the Connect Wallet button at the top right to save changes
+              </p>
             </div>
           )}
         </div>
@@ -292,7 +294,7 @@ const AdminView = () => {
             </div>
           </div>
 
-          {/* Save Changes Button - BLUE BUTTON, NO ICON */}
+          {/* Save Changes Button */}
           <div className="mt-8 pt-6 border-t border-gray-800">
             <div className="flex justify-center">
               <button
@@ -319,19 +321,19 @@ const AdminView = () => {
             
             {!account && (
               <p className="text-center text-gray-400 text-sm mt-3">
-                Connect your wallet using the button at the top right
+                Use the Connect Wallet button at the top right of this page
               </p>
             )}
           </div>
 
           {/* Instructions */}
           <div className="mt-6 p-6 bg-gray-900/50 rounded-xl border border-gray-800">
-            <h3 className="text-xl font-bold mb-4 text-green-400">How Blockchain Saving Works:</h3>
+            <h3 className="text-xl font-bold mb-4 text-green-400">How to Save Changes:</h3>
             
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 bg-green-900 rounded-full flex items-center justify-center text-xs">1</div>
-                <p className="text-white">Connect your Sui wallet (top right button)</p>
+                <p className="text-white">Connect your Sui wallet using the button at the top right</p>
               </div>
               
               <div className="flex items-center gap-3">

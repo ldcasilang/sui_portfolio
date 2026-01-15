@@ -213,8 +213,7 @@ const PortfolioView = () => {
 
         <div className="move-footer">
           <p>
-            Portfolio project published during Move Smart Contracts Code Camp<br />
-            by DEVCON Philippines & SUI Foundation
+           
           </p>
         </div>
       </div>
@@ -252,25 +251,6 @@ const PortfolioView = () => {
           </div>
         </div>
       </div>
-
-      {/* Connect Wallet Prompt */}
-      {!account && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <div className="bg-slate-900/90 backdrop-blur-sm p-4 rounded-2xl border border-sui-blue shadow-2xl max-w-sm">
-            <div className="flex items-start gap-3">
-              <div className="text-sui-blue text-xl">
-                <i className="fas fa-edit"></i>
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-white mb-1">Edit Your Portfolio</h4>
-                <p className="text-gray-300 text-sm mb-3">
-                  Connect your Sui wallet to customize your portfolio
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       <style>{`
         /* Socials */
