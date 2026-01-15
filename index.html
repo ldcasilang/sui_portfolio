@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/sui.svg" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Portfolio App</title>
+    
+    <!-- No CSP needed unless you have specific requirements -->
+    <!-- <meta http-equiv="Content-Security-Policy" 
+          content="script-src 'self' 'unsafe-inline' 'unsafe-eval';"> -->
+    
+    <!-- Optional: Only console logging, no alerts -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        // Simple check for debugging
+        setTimeout(() => {
+          const walletDetected = window.suietWallet || window.suiWallet;
+          console.log('Wallet status:', walletDetected ? 'Detected' : 'Not detected');
+        }, 1000);
+      });
+    </script>
+    <script type="module" crossorigin src="/assets/index-DLi-hkOm.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DS8mySN1.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
