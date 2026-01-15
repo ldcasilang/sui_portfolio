@@ -14,14 +14,19 @@ const defaultPortfolioData = {
     "Full Stack Development",
     "Web & App Development"
   ],
-  linkedin: "#",
-  github: "#"
+  linkedin: "https://www.linkedin.com/in/ldcasilang/",
+  github: "https://github.com/ldcasilang"
 }
+
+// Your published Move package ID (replace with your actual package ID)
+// This is the Object ID you get when you publish: sui client publish --gas-budget 10000000
+const PUBLISHED_PACKAGE_ID = "0xYOUR_PACKAGE_ID_HERE" // Replace with your actual package ID
 
 const PortfolioView = () => {
   const account = useCurrentAccount()
   const [portfolioData, setPortfolioData] = useState(defaultPortfolioData)
   const [views, setViews] = useState(500)
+  const [projectId, setProjectId] = useState(PUBLISHED_PACKAGE_ID)
 
   // Fetch SUI balance
   const { data: balanceData } = useSuiClientQuery(
@@ -34,22 +39,37 @@ const PortfolioView = () => {
     }
   )
 
-useEffect(() => {
-  const script = document.createElement("script")
-  script.src = "https://counter.websiteout.com/js/36/0/0/0"
-  script.async = true
+  // Try to fetch package info if we have a package ID
+  const { data: packageData } = useSuiClientQuery(
+    "getObject",
+    {
+      id: PUBLISHED_PACKAGE_ID,
+      options: {
+        showType: true,
+        showOwner: true,
+        showContent: true,
+      },
+    },
+    {
+      enabled: !!PUBLISHED_PACKAGE_ID && PUBLISHED_PACKAGE_ID !== "0xYOUR_PACKAGE_ID_HERE",
+      retry: false,
+    }
+  )
 
-  const counterDiv = document.getElementById("web-counter")
-  if (counterDiv && !counterDiv.hasChildNodes()) {
-    counterDiv.appendChild(script)
-  }
+  useEffect(() => {
+    const script = document.createElement("script")
+    script.src = "https://counter.websiteout.com/js/36/0/0/0"
+    script.async = true
 
-  return () => {
-    script.remove()
-  }
-}, [])
+    const counterDiv = document.getElementById("web-counter")
+    if (counterDiv && !counterDiv.hasChildNodes()) {
+      counterDiv.appendChild(script)
+    }
 
-
+    return () => {
+      script.remove()
+    }
+  }, [])
 
   useEffect(() => {
     // Load data from localStorage first
@@ -60,7 +80,10 @@ useEffect(() => {
         setPortfolioData(prev => ({
           ...prev,
           ...data,
-          name: data.name?.toUpperCase() || prev.name
+          name: data.name?.toUpperCase() || prev.name,
+          // Keep LinkedIn and GitHub URLs from defaults if not saved
+          linkedin: data.linkedin || prev.linkedin,
+          github: data.github || prev.github
         }))
       } catch (error) {
         console.error("Error loading saved data:", error)
@@ -69,12 +92,25 @@ useEffect(() => {
 
     // Increment views on load
     setViews(prev => prev + 1)
-  }, [])
 
-  // Format address for display
-  const formatAddress = (address: string) => {
-    if (!address) return ""
-    return `${address.slice(0, 6)}...${address.slice(-4)}`
+    // Check if package is published by looking at the response
+    if (packageData && packageData.error) {
+      // Package not found or invalid
+      setProjectId("Not Published Yet")
+    } else if (packageData) {
+      // Package exists on chain
+      console.log("Package found:", packageData)
+    }
+  }, [packageData])
+
+  // Format package ID for display
+  const formatProjectId = (id: string) => {
+    if (!id || id === "0xYOUR_PACKAGE_ID_HERE") {
+      return "Not Published Yet"
+    }
+    if (id === "Not Published Yet") return id
+    // Show first 8 and last 6 characters for long IDs
+    return `${id.slice(0, 10)}...${id.slice(-6)}`
   }
 
   // Convert MIST to SUI
@@ -105,24 +141,24 @@ useEffect(() => {
 
             <div className="socials">
               <a 
-                href={portfolioData.linkedin} 
-                target="_blank" 
+                href={portfolioData.linkedin}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="social-btn"
+                title="Visit my LinkedIn profile"
               >
                 <i className="fa-brands fa-linkedin"></i> LinkedIn
               </a>
               <a 
-                href={portfolioData.github} 
-                target="_blank" 
+                href={portfolioData.github}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="social-btn"
+                title="Visit my GitHub profile"
               >
                 <i className="fa-brands fa-github"></i> GitHub
               </a>
             </div>
-
-            {/* REMOVED: Wallet Info section below socials */}
           </div>
         </div>
       </div>
@@ -158,14 +194,13 @@ useEffect(() => {
           <a href="https://www.sui.io/move" target="_blank" className="learn-more-btn" rel="noopener noreferrer">
             Learn More About Sui →
           </a>
-
-         
         </div>
 
         {/* Footer-like info below the card */}
         <div className="move-footer">
           <p>
-           
+            Portfolio project published during Move Smart Contracts Code Camp<br />
+            by DEVCON Philippines & SUI Foundation
           </p>
         </div>
       </div>
@@ -177,18 +212,39 @@ useEffect(() => {
             <img src="/devcon.png" alt="DEVCON" className="logo-img" />
             <img src="/sui.png" alt="SUI" className="logo-img" />
           </div>
-         <div className="project-id flex flex-col md:flex-row items-center justify-center md:justify-end gap-2">
-  <span>
-    PROJECT ID:<br />
-    {account ? formatAddress(account.address) : "Connect wallet to see ID"}
-  </span>
-
-  {/* Free Web Counter */}
-  <div id="web-counter"></div>
-</div>
-
-
           
+          {/* Project ID and View Count moved to the right */}
+          <div className="footer-right-section">
+            <div className="footer-info-container">
+              {/* Project ID Box - Shows actual Package ID */}
+              <div className="info-box">
+                <div className="info-label">PROJECT ID:</div>
+                <div className="info-value" title={projectId}>
+                  {formatProjectId(projectId)}
+                </div>
+                {projectId && projectId !== "Not Published Yet" && projectId !== "0xYOUR_PACKAGE_ID_HERE" && (
+                  <div className="info-subtext">
+                    <a 
+                      href={`https://suiscan.xyz/mainnet/object/${projectId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="view-on-explorer"
+                    >
+                      View on Explorer
+                    </a>
+                  </div>
+                )}
+              </div>
+              
+              {/* View Count Box */}
+              <div className="info-box">
+                <div className="info-label">VIEW COUNT:</div>
+                <div className="info-value">
+                  <div id="web-counter"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -205,7 +261,14 @@ useEffect(() => {
                 <p className="text-gray-300 text-sm mb-3">
                   Connect your Sui wallet to customize your portfolio on the blockchain
                 </p>
-                
+                {projectId === "Not Published Yet" && (
+                  <div className="mt-2 p-2 bg-yellow-900/30 rounded border border-yellow-700">
+                    <p className="text-xs text-yellow-300">
+                      <i className="fas fa-exclamation-triangle mr-1"></i>
+                      Publish your Move package to get a real Project ID
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -213,7 +276,7 @@ useEffect(() => {
       )}
 
       <style>{`
-        /* Socials styling matching the HTML example */
+        /* Socials styling */
         .socials {
           display: flex;
           gap: 1rem;
@@ -226,7 +289,6 @@ useEffect(() => {
           align-items: center;
           gap: 8px;
           padding: 10px 18px;
-          margin-right: 10px;
           border-radius: 12px;
           background: #0b1b3a;
           color: #93c5fd;
@@ -234,28 +296,139 @@ useEffect(() => {
           border: 1px solid #1e40af;
           transition: 0.3s;
           font-weight: 500;
+          cursor: pointer;
         }
         
         .social-btn:hover {
           background: #1e40af;
           color: #fff;
+          text-decoration: none;
         }
         
         /* FontAwesome icons styling */
         .social-btn i {
           font-size: 1.1rem;
         }
+
+        /* Footer Container */
+        .footer-container {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          width: 100%;
+          flex-wrap: wrap;
+          gap: 20px;
+        }
+
+        /* Right Section - Project ID & View Count */
+        .footer-right-section {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          margin-left: auto;
+        }
+
+        /* Footer Info Container */
+        .footer-info-container {
+          display: flex;
+          gap: 20px;
+          justify-content: flex-end;
+          align-items: flex-start;
+        }
+
+        /* Info Box Styling */
+        .info-box {
+          background: rgba(11, 27, 58, 0.8);
+          border: 1px solid #1e40af;
+          border-radius: 8px;
+          padding: 12px 16px;
+          min-width: 180px;
+          text-align: center;
+          position: relative;
+        }
+
+        .info-label {
+          font-size: 0.8rem;
+          color: #93c5fd;
+          font-weight: 600;
+          margin-bottom: 4px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .info-value {
+          font-size: 0.9rem;
+          color: white;
+          font-family: monospace;
+          word-break: break-all;
+          cursor: default;
+        }
+
+        .info-subtext {
+          margin-top: 6px;
+          font-size: 0.7rem;
+        }
+
+        .view-on-explorer {
+          color: #60a5fa;
+          text-decoration: none;
+          font-size: 0.75rem;
+        }
+
+        .view-on-explorer:hover {
+          text-decoration: underline;
+        }
+
+        /* Counter widget styling */
+        #web-counter {
+          font-size: 0.9rem;
+          color: white;
+          font-family: monospace;
+          display: inline-block;
+        }
+
+        #web-counter img {
+          max-height: 20px;
+          border: none !important;
+          background: transparent !important;
+        }
+
+        /* Move footer text styling */
+        .move-footer {
+          text-align: center;
+          margin-top: 30px;
+          padding: 15px;
+          color: rgba(255, 255, 255, 0.7);
+          font-size: 0.9rem;
+          line-height: 1.5;
+        }
+
+        .move-footer p {
+          margin: 0;
+        }
         
-        @media (max-width: 900px) {
-          .socials {
-            justify-content: center;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
+        /* Responsive styles */
+        @media (max-width: 768px) {
+          .footer-container {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
           }
           
-          .social-btn {
-            margin-right: 0;
+          .footer-right-section {
+            margin-left: 0;
+            align-items: center;
+            width: 100%;
+          }
+          
+          .footer-info-container {
+            justify-content: center;
+            flex-wrap: wrap;
+          }
+          
+          .socials {
+            justify-content: center;
+            gap: 15px;
           }
         }
         
@@ -269,6 +442,16 @@ useEffect(() => {
           .social-btn {
             width: 200px;
             justify-content: center;
+          }
+          
+          .footer-info-container {
+            flex-direction: column;
+            align-items: center;
+          }
+          
+          .info-box {
+            width: 100%;
+            max-width: 300px;
           }
         }
       `}</style>
