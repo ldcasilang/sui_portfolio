@@ -34,6 +34,23 @@ const PortfolioView = () => {
     }
   )
 
+useEffect(() => {
+  const script = document.createElement("script")
+  script.src = "https://counter.websiteout.com/js/36/0/0/0"
+  script.async = true
+
+  const counterDiv = document.getElementById("web-counter")
+  if (counterDiv && !counterDiv.hasChildNodes()) {
+    counterDiv.appendChild(script)
+  }
+
+  return () => {
+    script.remove()
+  }
+}, [])
+
+
+
   useEffect(() => {
     // Load data from localStorage first
     const savedData = localStorage.getItem('portfolioData')
@@ -160,10 +177,18 @@ const PortfolioView = () => {
             <img src="/devcon.png" alt="DEVCON" className="logo-img" />
             <img src="/sui.png" alt="SUI" className="logo-img" />
           </div>
-          <div className="project-id">
-            PROJECT ID:<br />
-            {account ? formatAddress(account.address) : "Connect wallet to see ID"}
-          </div>
+         <div className="project-id flex flex-col md:flex-row items-center justify-center md:justify-end gap-2">
+  <span>
+    PROJECT ID:<br />
+    {account ? formatAddress(account.address) : "Connect wallet to see ID"}
+  </span>
+
+  {/* Free Web Counter */}
+  <div id="web-counter"></div>
+</div>
+
+
+          
         </div>
       </div>
 
