@@ -1,19 +1,16 @@
-/// @title Portfolio Manager
-/// @notice A smart contract for managing on-chain portfolio data
+/// @title Portfolio Manager with 7 Fields
+/// @notice Stores complete portfolio data on-chain
 
 module portfolio::portfolio {
-    use sui::object::{Self, UID};
+    use sui::object::{Self, UID, ID};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
+    use sui::event;
     use std::string::String;
 
-    /// Error codes
-    const ENotOwner: u64 = 0;
-
-    /// Portfolio data structure
-    struct Portfolio has key, store {
+    /// Portfolio with 7 fields
+    public struct Portfolio has key, store {
         id: UID,
-        owner: address,
         name: String,
         course: String,
         school: String,
@@ -21,14 +18,23 @@ module portfolio::portfolio {
         linkedin_url: String,
         github_url: String,
         skills: vector<String>,
-        views: u64,
-        created_at: u64,
-        updated_at: u64
     }
 
-    // === Public Functions ===
+    /// Event emitted when portfolio is created
+    public struct PortfolioCreated has copy, drop {
+        object_id: ID,
+        name: String,
+        owner: address,
+    }
 
-    /// Create a new portfolio
+    /// Event emitted when portfolio is updated
+    public struct PortfolioUpdated has copy, drop {
+        object_id: ID,
+        name: String,
+        updater: address,
+    }
+
+    /// Create new portfolio with 7 fields
     public fun create(
         name: String,
         course: String,
@@ -39,25 +45,29 @@ module portfolio::portfolio {
         skills: vector<String>,
         ctx: &mut TxContext
     ) {
+        let sender = tx_context::sender(ctx);
         let portfolio = Portfolio {
             id: object::new(ctx),
-            owner: tx_context::sender(ctx),
-            name,
-            course,
-            school,
-            about,
-            linkedin_url,
-            github_url,
-            skills,
-            views: 0,
-            created_at: tx_context::epoch(ctx),
-            updated_at: tx_context::epoch(ctx)
+            name: copy name,
+            course: copy course,
+            school: copy school,
+            about: copy about,
+            linkedin_url: copy linkedin_url,
+            github_url: copy github_url,
+            skills: copy skills,
         };
-
+        
+        let object_id = object::id(&portfolio);
         transfer::share_object(portfolio);
+        
+        event::emit(PortfolioCreated {
+            object_id,
+            name,
+            owner: sender,
+        });
     }
 
-    /// Update portfolio data (only owner can update)
+    /// **NEW: Update existing portfolio**
     public fun update(
         portfolio: &mut Portfolio,
         name: String,
@@ -69,8 +79,8 @@ module portfolio::portfolio {
         skills: vector<String>,
         ctx: &mut TxContext
     ) {
-        assert!(portfolio.owner == tx_context::sender(ctx), ENotOwner);
-
+        let sender = tx_context::sender(ctx);
+        
         portfolio.name = name;
         portfolio.course = course;
         portfolio.school = school;
@@ -78,78 +88,69 @@ module portfolio::portfolio {
         portfolio.linkedin_url = linkedin_url;
         portfolio.github_url = github_url;
         portfolio.skills = skills;
-        portfolio.updated_at = tx_context::epoch(ctx);
-    }
-
-    /// Increment view count
-    public fun increment_views(portfolio: &mut Portfolio) {
-        portfolio.views = portfolio.views + 1;
-    }
-
-    /// Transfer portfolio ownership
-    public fun transfer_ownership(
-        portfolio: &mut Portfolio,
-        new_owner: address,
-        ctx: &mut TxContext
-    ) {
-        assert!(portfolio.owner == tx_context::sender(ctx), ENotOwner);
-        portfolio.owner = new_owner;
-    }
-
-    // === View Functions ===
-
-    /// Get portfolio owner
-    public fun owner(portfolio: &Portfolio): address {
-        portfolio.owner
+        
+        let object_id = object::id(portfolio);
+        
+        event::emit(PortfolioUpdated {
+            object_id,
+            name: portfolio.name,
+            updater: sender,
+        });
     }
 
     /// Get portfolio name
-    public fun name(portfolio: &Portfolio): &String {
+    public fun get_name(portfolio: &Portfolio): &String {
         &portfolio.name
     }
 
-    /// Get course
-    public fun course(portfolio: &Portfolio): &String {
+    /// Get portfolio course
+    public fun get_course(portfolio: &Portfolio): &String {
         &portfolio.course
     }
 
-    /// Get school
-    public fun school(portfolio: &Portfolio): &String {
+    /// Get portfolio school
+    public fun get_school(portfolio: &Portfolio): &String {
         &portfolio.school
     }
 
-    /// Get about section
-    public fun about(portfolio: &Portfolio): &String {
+    /// Get portfolio about
+    public fun get_about(portfolio: &Portfolio): &String {
         &portfolio.about
     }
 
     /// Get LinkedIn URL
-    public fun linkedin_url(portfolio: &Portfolio): &String {
+    public fun get_linkedin_url(portfolio: &Portfolio): &String {
         &portfolio.linkedin_url
     }
 
     /// Get GitHub URL
-    public fun github_url(portfolio: &Portfolio): &String {
+    public fun get_github_url(portfolio: &Portfolio): &String {
         &portfolio.github_url
     }
 
-    /// Get skills list
-    public fun skills(portfolio: &Portfolio): &vector<String> {
+    /// Get skills
+    public fun get_skills(portfolio: &Portfolio): &vector<String> {
         &portfolio.skills
     }
 
-    /// Get view count
-    public fun views(portfolio: &Portfolio): u64 {
-        portfolio.views
-    }
-
-    /// Get creation timestamp
-    public fun created_at(portfolio: &Portfolio): u64 {
-        portfolio.created_at
-    }
-
-    /// Get last update timestamp
-    public fun updated_at(portfolio: &Portfolio): u64 {
-        portfolio.updated_at
+    /// Get all portfolio data (view function)
+    public fun get_all_data(portfolio: &Portfolio): (
+        &String,
+        &String,
+        &String,
+        &String,
+        &String,
+        &String,
+        &vector<String>
+    ) {
+        (
+            &portfolio.name,
+            &portfolio.course,
+            &portfolio.school,
+            &portfolio.about,
+            &portfolio.linkedin_url,
+            &portfolio.github_url,
+            &portfolio.skills
+        )
     }
 }

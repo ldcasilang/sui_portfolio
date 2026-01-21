@@ -1,70 +1,77 @@
-import { useCurrentAccount, ConnectButton, useSuiClientQuery } from "@mysten/dapp-kit"
-import { ToastContainer } from "react-toastify"
-import PortfolioView from "./views/PortfolioView"
-import AdminView from "./views/AdminView"
-import { useState, useEffect } from "react"
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom"
-import PasswordProtection from "./components/PasswordProtection"
+import React, { useEffect } from "react";
+import { useCurrentAccount, ConnectButton, useSuiClientQuery } from "@mysten/dapp-kit";
+import { ToastContainer } from "react-toastify";
+import PortfolioView from "./views/PortfolioView";
+import AdminView from "./views/AdminView";
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import PasswordProtection from "./components/PasswordProtection";
+import "react-toastify/dist/ReactToastify.css";
 
-// Inline toast filter function
+// Inline toast filter function (defensive)
 const toastClassName = (context: any): string => {
-  if (!context?.toastProps?.children) return '';
-  
   try {
-    const message = context.toastProps.children.toString();
-    const lowerMessage = message.toLowerCase();
-    const walletKeywords = ['wallet', 'connect', 'disconnect', 'failed', 'error', 'no wallet', 'extension'];
-    
-    if (walletKeywords.some(keyword => lowerMessage.includes(keyword))) {
-      return 'wallet-toast-hidden';
+    const children = context?.toastProps?.children;
+    if (!children) return "";
+
+    let message = "";
+    if (typeof children === "string") {
+      message = children;
+    } else if (Array.isArray(children)) {
+      message = children.map((c) => (typeof c === "string" ? c : JSON.stringify(c))).join(" ");
+    } else {
+      message = String(children);
     }
-  } catch (error) {
-    // Silent error handling
+
+    const lowerMessage = message.toLowerCase();
+    const walletKeywords = ["wallet", "connect", "disconnect", "failed", "error", "no wallet", "extension"];
+    if (walletKeywords.some((keyword) => lowerMessage.includes(keyword))) {
+      return "wallet-toast-hidden";
+    }
+  } catch (e) {
+    // fail silently — don't block toasts
+    console.warn("toastClassName filter failed:", e);
   }
-  return '';
+  return "";
 };
 
-// Main Layout Component
+// Main Layout Component (keeps your original header/footer and wallet banner)
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
-  const account = useCurrentAccount()
-  const [showAdmin, setShowAdmin] = useState(false)
-  const location = useLocation()
-  const navigate = useNavigate()
+  const account = useCurrentAccount();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  // Fetch SUI balance silently
+  // Fetch SUI balance quietly
   const { data: balanceData } = useSuiClientQuery(
     "getBalance",
-    {
-      owner: account?.address as string,
-    },
+    { owner: account?.address as string },
     {
       enabled: !!account,
-      retry: 0, // No retries to prevent error toasts
-      onError: (error) => {
-        // Silent error handling
-        console.log('Balance fetch failed:', error.message);
-      }
+      retry: 0,
+      onError: (error: any) => {
+        console.log("Balance fetch failed:", error?.message ?? error);
+      },
     }
-  )
+  );
 
-  // Convert MIST to SUI
   const getSuiBalance = () => {
-    if (!balanceData) return "0.00"
-    return (Number(balanceData.totalBalance) / 1_000_000_000).toFixed(2)
-  }
+    try {
+      const total = balanceData?.totalBalance ?? balanceData?.total_balance ?? 0;
+      const numeric = Number(total);
+      if (Number.isNaN(numeric)) return "0.00";
+      return (numeric / 1_000_000_000).toFixed(2);
+    } catch {
+      return "0.00";
+    }
+  };
 
-  // Handle back to portfolio
-  const handleBackToPortfolio = () => {
-    navigate('/')
-  }
+  const handleBackToPortfolio = () => navigate("/");
 
   return (
     <div className="min-h-screen bg-sui-dark text-white font-inter">
-      {/* Filtered ToastContainer */}
-      <ToastContainer 
-        position="top-right" 
+      <ToastContainer
+        position="top-right"
         theme="dark"
-        autoClose={3000}
+        autoClose={4000}
         hideProgressBar={false}
         newestOnTop={false}
         closeOnClick
@@ -73,27 +80,25 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
         draggable
         pauseOnHover
         limit={1}
-        // Apply filter function
         toastClassName={toastClassName}
+        toastStyle={{
+          background: "linear-gradient(180deg, rgba(11,27,58,0.95), rgba(6,10,30,0.95))",
+          color: "#e6f6ff",
+          border: "1px solid rgba(79,70,229,0.12)",
+          borderRadius: 12,
+          boxShadow: "0 6px 20px rgba(2,6,23,0.6)",
+        }}
       />
-      
-      {/* Simple Header */}
+
       <header className="bg-slate-900 border-b border-gray-800 py-4 px-6">
         <div className="max-w-[1100px] mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <img 
-              src="/sui-logo.png" 
-              alt="Sui Logo" 
-              className="w-10 h-10 rounded-lg"
-            />
-            <h1 className="text-2xl font-bold bg-name-gradient bg-clip-text text-transparent">
-              Sui Portfolio
-            </h1>
+            <img src="/sui-logo.png" alt="Sui Logo" className="w-10 h-10 rounded-lg" />
+            <h1 className="text-2xl font-bold bg-name-gradient bg-clip-text text-transparent">Sui Portfolio</h1>
           </div>
-          
+
           <div className="flex items-center gap-4">
-            {/* Show "Back to Portfolio" button when on admin page */}
-            {location.pathname === '/cms-admin' && (
+            {location.pathname === "/cms-admin" && (
               <button
                 onClick={handleBackToPortfolio}
                 className="px-5 py-3 rounded-xl bg-gradient-to-r from-gray-700 to-gray-800 text-white font-semibold hover:from-gray-800 hover:to-gray-700 transition-all"
@@ -101,10 +106,9 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 ← Back to Portfolio
               </button>
             )}
-            
-            {/* Show Connect Wallet button only on admin page */}
-            {location.pathname === '/cms-admin' && (
-              <ConnectButton 
+
+            {location.pathname === "/cms-admin" && (
+              <ConnectButton
                 connectText="Connect Wallet"
                 className="!bg-gradient-to-r !from-sui-blue !to-blue-700 !text-white !font-semibold !rounded-xl !px-5 !py-3 hover:!from-blue-700 hover:!to-sui-blue transition-all"
               />
@@ -114,11 +118,11 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
       </header>
 
       {/* Wallet Status Banner - Only show on admin page when connected */}
-      {account && location.pathname === '/cms-admin' && (
+      {account && window.location.pathname === "/cms-admin" && (
         <div className="bg-green-900/20 border-l-4 border-green-500 p-3">
           <div className="max-w-[1100px] mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
               <div>
                 <div className="flex items-center gap-4">
                   <p className="font-semibold text-green-400">Wallet Connected</p>
@@ -133,18 +137,13 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 </p>
               </div>
             </div>
-            <div className="text-sm text-gray-300">
-              Ready to edit your portfolio
-            </div>
+            <div className="text-sm text-gray-300">Ready to edit your portfolio</div>
           </div>
         </div>
       )}
 
-      <main id="top">
-        {children}
-      </main>
+      <main id="top">{children}</main>
 
-      {/* Footer */}
       <footer className="bg-slate-900 border-t border-gray-800 py-8">
         <div className="max-w-[1100px] mx-auto px-4 text-center text-gray-400">
           <p>Portfolio project published during <strong>Move Smart Contracts Code Camp</strong></p>
@@ -152,46 +151,27 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
         </div>
       </footer>
     </div>
-  )
-}
+  );
+};
 
 function App() {
-  // Intercept toast calls early
+  // Lightweight console.error filter for noisy wallet logs (optional)
   useEffect(() => {
-    // Monkey patch toast.error to filter wallet messages
-    const originalToastError = (window as any).toast?.error;
-    if (originalToastError && typeof originalToastError === 'function') {
-      (window as any).toast.error = (message: string, options?: any) => {
-        const lowerMessage = String(message).toLowerCase();
-        const walletKeywords = ['wallet', 'connect', 'failed', 'error', 'no wallet'];
-        
-        if (walletKeywords.some(keyword => lowerMessage.includes(keyword))) {
-          console.log('[Suppressed] Wallet toast:', message);
-          return { id: 'suppressed' };
-        }
-        
-        return originalToastError(message, options);
-      };
-    }
-    
-    // Also intercept console.error which might trigger toasts
     const originalConsoleError = console.error;
-    console.error = (...args) => {
-      const message = args.join(' ');
-      if (message.toLowerCase().includes('wallet') || 
-          message.toLowerCase().includes('connect') ||
-          message.toLowerCase().includes('dapp-kit')) {
-        console.log('[Suppressed console error]:', message);
-        return;
+    console.error = (...args: any[]) => {
+      try {
+        const message = args.map((a) => String(a)).join(" ");
+        if (/wallet|connect|dapp-kit|no wallet/i.test(message)) {
+          console.log("[Suppressed console.error]:", message);
+          return;
+        }
+      } catch {
+        // ignore
       }
       originalConsoleError.apply(console, args);
     };
-    
+
     return () => {
-      // Restore original functions
-      if (originalToastError) {
-        (window as any).toast.error = originalToastError;
-      }
       console.error = originalConsoleError;
     };
   }, []);
@@ -199,22 +179,16 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={
-          <MainLayout>
-            <PortfolioView />
-          </MainLayout>
-        } />
+        <Route path="/" element={<MainLayout><PortfolioView /></MainLayout>} />
         <Route path="/cms-admin" element={
           <PasswordProtection password="Movecodecampexercise!">
-            <MainLayout>
-              <AdminView />
-            </MainLayout>
+            <MainLayout><AdminView /></MainLayout>
           </PasswordProtection>
         } />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>
-  )
+  );
 }
 
-export default App
+export default App;

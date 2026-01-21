@@ -5,6 +5,24 @@
   text-align: center;
 }
 
+.custom-success-toast {
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  max-width: 500px !important;
+}
+
+.Toastify__toast-container {
+  z-index: 99999 !important;
+}
+
+.Toastify__toast {
+  background: #0f172a !important;
+  border: 1px solid #1e293b !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5) !important;
+}
+
 .logo {
   height: 6em;
   padding: 1.5em;
