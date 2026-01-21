@@ -94,7 +94,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
         <div className="max-w-[1100px] mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
             <img src="/sui-logo.png" alt="Sui Logo" className="w-10 h-10 rounded-lg" />
-            <h1 className="text-2xl font-bold bg-name-gradient bg-clip-text text-transparent">Sui Portfolio</h1>
+            <h1 className="text-2xl font-bold bg-name-gradient bg-clip-text text-transparent">Move Smart Contract Portfolio</h1>
           </div>
 
           <div className="flex items-center gap-4">

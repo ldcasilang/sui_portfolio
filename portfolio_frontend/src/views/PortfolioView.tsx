@@ -1,21 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
-import { useCurrentAccount, useSuiClientQuery } from "@mysten/dapp-kit";
-import { toast } from "react-toastify";
+import React, { useEffect, useState } from "react";
+import { useSuiClientQuery } from "@mysten/dapp-kit";
 
-/**
- * PortfolioView - chain-first with owner discovery + polling + focus refetch
- *
- * Guarantees:
- * - Periodically (every pollIntervalMs) re-checks the owner's objects (getOwnedObjects)
- *   and re-fetches the portfolio object (getObject) if found or if lastTransactionDigest changes.
- * - Also refetches when window/tab gains focus for near-instant updates when users return.
- * - OWNER_ADDRESS must be the account that owns / published the portfolio Move object.
- *
- * Set OWNER_ADDRESS to the publisher's address to guarantee other visitors see updates.
- */
-
-const OWNER_ADDRESS = "0x967ebe2164e054b4954b3c75892ecef4666f5c271bd6b0436ee17c7f60fe422c"; // <-- set owner/publisher address
-const pollIntervalMs = 10_000; // 10s polling interval (safe and responsive)
+// FULL portfolio object ID from your transaction
+const PORTFOLIO_OBJECT_ID = "0xaea8c28189494d599a65dd5f3d935d4009ac2cad50f96a5e1123ff7a0744585a";
+const PACKAGE_ID = "0x1c9d4893b52e3673cbb1c568fe06743e40cfb70a876f6817870202a402ddc477";
+const pollIntervalMs = 5_000;
 
 const defaultPortfolioData = {
   name: "LADY DIANE BAUZON CASILANG",
@@ -35,50 +24,13 @@ const defaultPortfolioData = {
 };
 
 const PortfolioView: React.FC = () => {
-  const account = useCurrentAccount();
-
   const [portfolioData, setPortfolioData] = useState(defaultPortfolioData);
-  const [projectId] = useState(
-    "0x1c9d4893b52e3673cbb1c568fe06743e40cfb70a876f6817870202a402ddc477"
-  );
-
-  // identifiers / source state
-  const [portfolioObjectId, setPortfolioObjectId] = useState<string>("");
-  const [lastTransactionDigest, setLastTransactionDigest] = useState<string>(
-    localStorage.getItem("lastTransactionDigest") || ""
-  );
+  const [lastTransactionDigest, setLastTransactionDigest] = useState<string>("");
   const [dataSource, setDataSource] = useState<"unknown" | "blockchain">("unknown");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string>("");
 
-  // Refs for stable functions
-  const isMountedRef = useRef(true);
-
-  // 1) Query owned objects for OWNER_ADDRESS (disabled auto-run; we'll trigger refetch manually)
-  const {
-    data: ownedObjects,
-    refetch: refetchOwnedObjects,
-    isFetching: isFetchingOwnedObjects,
-  } = useSuiClientQuery(
-    "getOwnedObjects",
-    { owner: OWNER_ADDRESS },
-    { enabled: false, retry: 1 }
-  );
-
-  // 2) Query transaction block when we have a digest (AdminView saves this digest)
-  const {
-    data: txBlockData,
-    refetch: refetchTxBlock,
-    isFetching: isFetchingTxBlock,
-  } = useSuiClientQuery(
-    "getTransactionBlock",
-    {
-      digest: lastTransactionDigest,
-      options: { showEffects: true, showEvents: true, showObjectChanges: true },
-    },
-    { enabled: !!lastTransactionDigest, retry: 1 }
-  );
-
-  // 3) Query the object content when we have an object id
+  // DIRECT QUERY: Fetch the portfolio object using the exact full object ID
   const {
     data: portfolioObject,
     refetch: refetchPortfolioObject,
@@ -86,204 +38,194 @@ const PortfolioView: React.FC = () => {
   } = useSuiClientQuery(
     "getObject",
     {
-      id: portfolioObjectId,
-      options: { showContent: true, showType: true, showOwner: true },
+      id: PORTFOLIO_OBJECT_ID,
+      options: { 
+        showContent: true, 
+        showType: true,
+        showOwner: true,
+        showPreviousTransaction: true,
+        showStorageRebate: true,
+        showDisplay: true,
+        showBcs: false
+      },
     },
-    { enabled: !!portfolioObjectId && portfolioObjectId.startsWith("0x"), retry: 2 }
+    { 
+      enabled: true,
+      retry: 3,
+      refetchInterval: pollIntervalMs
+    }
   );
 
-  // Helper to try to extract portfolio object id from various SDK shapes
-  const extractObjectIdFromOwned = (items: any): string | null => {
-    if (!items) return null;
-    const arr = Array.isArray(items) ? items : items?.data || items?.objects || items?.result || [];
-    if (!Array.isArray(arr)) return null;
-    for (const it of arr) {
-      const type = it?.type || it?.data?.type || it?.object?.type || it?.result?.type;
-      const objectId =
-        it?.objectId ||
-        it?.object_id ||
-        it?.reference?.objectId ||
-        it?.object?.objectId ||
-        it?.id;
-      if (type && String(type).includes("portfolio::Portfolio")) {
-        return objectId || it?.object?.reference?.objectId || it?.reference?.objectId || it?.objectId;
-      }
-    }
-    return null;
-  };
-
-  // Parse transaction block for object id (events/effects/objectChanges)
-  const extractObjectIdFromTxBlock = (tx: any): string | null => {
-    if (!tx) return null;
-    try {
-      const events = tx?.effects?.events || tx?.events || [];
-      for (const ev of events) {
-        if (ev?.parsedJson && typeof ev.parsedJson === "object") {
-          if (ev.parsedJson?.object_id) return ev.parsedJson.object_id;
-          if (ev.parsedJson?.fields?.object_id) return ev.parsedJson.fields.object_id;
-        } else if (ev?.bcs && typeof ev.bcs === "string") {
-          try {
-            const parsed = JSON.parse(ev.bcs);
-            if (parsed?.object_id) return parsed.object_id;
-          } catch {}
-        } else if (ev?.object_id) {
-          return ev.object_id;
-        }
-      }
-
-      const created = tx?.effects?.created || tx?.effects?.createdObjects || [];
-      for (const obj of created) {
-        const cand =
-          obj?.reference?.objectId || obj?.objectId || obj?.object_id || obj?.id || obj?.object?.objectId;
-        if (cand && String(cand).startsWith("0x")) return cand;
-      }
-
-      if (Array.isArray(tx?.objectChanges)) {
-        for (const ch of tx.objectChanges) {
-          if (ch?.type === "created" || ch?.type === "mutated" || ch?.type === "published") {
-            const cand = ch.objectId || ch.object_id || ch?.object?.objectId || ch?.objectId;
-            if (cand && String(cand).startsWith("0x")) return cand;
-          }
-        }
-      }
-    } catch (e) {
-      // ignore parse errors
-    }
-    return null;
-  };
-
-  // Apply on-chain object fields to UI
+  // Apply blockchain data to UI
   useEffect(() => {
-    if (!portfolioObject) return;
-
-    try {
-      const content = portfolioObject?.data?.content;
-      if (content && content?.dataType === "moveObject") {
-        const fields = (content as any).fields || {};
-        const blockchainData = {
-          name: fields.name || defaultPortfolioData.name,
-          course: fields.course || defaultPortfolioData.course,
-          school: fields.school || defaultPortfolioData.school,
-          about: fields.about || defaultPortfolioData.about,
-          linkedin: fields.linkedin_url || fields.linkedin || defaultPortfolioData.linkedin,
-          github: fields.github_url || fields.github || defaultPortfolioData.github,
-          skills: fields.skills || defaultPortfolioData.skills,
-        };
-        setPortfolioData(blockchainData);
-        setDataSource("blockchain");
-
-        // sync lastTransactionDigest from localStorage (AdminView writes this)
-        const savedDigest = localStorage.getItem("lastTransactionDigest");
-        if (savedDigest) setLastTransactionDigest(savedDigest);
-      } else if (portfolioObject?.error) {
-        console.warn("Error fetching blockchain object:", portfolioObject.error);
-      }
-    } catch (e) {
-      console.error("Error applying on-chain portfolio to UI:", e);
+    console.log("Portfolio object query result:", portfolioObject);
+    
+    if (!portfolioObject) {
+      console.log("No portfolio object data yet");
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
+    if (portfolioObject.error) {
+      console.error("Error fetching portfolio:", portfolioObject.error);
+      setError(`Error: ${portfolioObject.error.message}`);
+      setIsLoading(false);
+      return;
+    }
+    
+    if (!portfolioObject.data) {
+      console.log("No portfolio object data available");
+      setError("No data received from blockchain");
+      setIsLoading(false);
+      return;
+    }
+
+    const content = portfolioObject.data.content;
+    if (!content) {
+      console.log("No content in portfolio object");
+      setError("Portfolio object has no content");
+      setIsLoading(false);
+      return;
+    }
+
+    if (content.dataType !== "moveObject") {
+      console.log("Content is not a move object:", content.dataType);
+      setError(`Expected moveObject, got ${content.dataType}`);
+      setIsLoading(false);
+      return;
+    }
+
+    const fields = (content as any).fields;
+    console.log("Portfolio object fields:", fields);
+
+      document.title = `${fields.name || defaultPortfolioData.name} | Move Smart Contract Portfolio`;
+    
+    // Get transaction info
+    if (portfolioObject.data.previousTransaction) {
+      setLastTransactionDigest(portfolioObject.data.previousTransaction);
+    }
+    
+    // Extract ALL possible field names from the Move object
+    // Try multiple variations since field names might differ
+    const blockchainData = {
+      name: fields.name || fields.full_name || fields.student_name || fields.Name || defaultPortfolioData.name,
+      course: fields.course || fields.degree || fields.program || fields.Course || defaultPortfolioData.course,
+      school: fields.school || fields.university || fields.institution || fields.School || defaultPortfolioData.school,
+      about: fields.about || fields.bio || fields.description || fields.About || fields.about_me || defaultPortfolioData.about,
+      linkedin: fields.linkedin || fields.linkedin_url || fields.linkedin_link || fields.LinkedIn || defaultPortfolioData.linkedin,
+      github: fields.github || fields.github_url || fields.github_link || fields.GitHub || defaultPortfolioData.github,
+      skills: Array.isArray(fields.skills) ? fields.skills : 
+             Array.isArray(fields.Skills) ? fields.Skills : 
+             Array.isArray(fields.skill_list) ? fields.skill_list :
+             defaultPortfolioData.skills,
+    };
+    
+    console.log("Extracted blockchain data:", blockchainData);
+    
+    // Check if we actually got blockchain data (not just defaults)
+    const hasBlockchainData = 
+      blockchainData.name !== defaultPortfolioData.name ||
+      blockchainData.course !== defaultPortfolioData.course ||
+      blockchainData.school !== defaultPortfolioData.school ||
+      blockchainData.about !== defaultPortfolioData.about ||
+      blockchainData.skills !== defaultPortfolioData.skills;
+    
+    if (hasBlockchainData) {
+      setPortfolioData(blockchainData);
+      setDataSource("blockchain");
+      setError(""); // Clear any previous errors
+      console.log("✅ Successfully loaded blockchain data!");
+    } else {
+      console.log("Using default data - no blockchain data extracted");
+      setError("Connected to blockchain but using default data (field names may not match)");
+    }
+    
+    setIsLoading(false);
+    
   }, [portfolioObject]);
 
-  // When ownedObjects result changes, try to extract portfolio object id
-  useEffect(() => {
-    if (!ownedObjects) return;
-    try {
-      const candidate = extractObjectIdFromOwned(ownedObjects?.data || ownedObjects);
-      if (candidate) {
-        if (candidate !== portfolioObjectId) {
-          setPortfolioObjectId(candidate);
-          setDataSource("blockchain");
-          setTimeout(() => refetchPortfolioObject?.(), 50);
-        }
-      }
-    } catch (e) {
-      // ignore
+  // Also search by type as backup (in case object was updated to new ID)
+  const {
+    data: objectsByType,
+    refetch: refetchObjectsByType,
+  } = useSuiClientQuery(
+    "queryObjects",
+    { 
+      query: { 
+        filter: { 
+          StructType: `${PACKAGE_ID}::portfolio::Portfolio` 
+        } 
+      },
+      options: { showContent: true, showType: true }
+    },
+    { 
+      enabled: false, // We'll trigger this manually if direct fetch fails
+      retry: 2 
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ownedObjects]);
+  );
 
-  // When txBlockData arrives, try to extract object id and fetch object
+  // If direct fetch has error, try type search
   useEffect(() => {
-    if (!txBlockData) return;
-    try {
-      const candidate = extractObjectIdFromTxBlock(txBlockData);
-      if (candidate) {
-        if (candidate !== portfolioObjectId) {
-          setPortfolioObjectId(candidate);
-          setDataSource("blockchain");
-          setTimeout(() => refetchPortfolioObject?.(), 50);
-        }
-      }
-    } catch (e) {
-      // ignore
+    if (error && error.includes("Error")) {
+      console.log("Direct fetch failed, trying type search...");
+      refetchObjectsByType();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [txBlockData]);
+  }, [error, refetchObjectsByType]);
 
-  // Polling + focus refetch: periodically refetch ownedObjects, object, and txBlock
+  // Handle type search results
   useEffect(() => {
-    isMountedRef.current = true;
-
-    const doRefetch = () => {
-      try {
-        refetchOwnedObjects?.().catch((e) => console.warn("ownedObjects:", e));
-        if (portfolioObjectId) refetchPortfolioObject?.().catch((e) => console.warn("getObject:", e));
-        if (lastTransactionDigest) refetchTxBlock?.().catch((e) => console.warn("txBlock:", e));
-      } catch (e) {
-        console.warn("Periodic refetch failed:", e);
+    if (objectsByType?.data?.data && Array.isArray(objectsByType.data.data)) {
+      const items = objectsByType.data.data;
+      console.log(`Found ${items.length} portfolio objects by type search`);
+      
+      if (items.length > 0) {
+        console.log("First portfolio object:", items[0]);
       }
+    }
+  }, [objectsByType]);
+
+  // Poll for updates
+  useEffect(() => {
+    const refreshData = () => {
+      console.log("Refreshing portfolio data...");
+      refetchPortfolioObject();
     };
 
-    // immediate fetch on mount
-    doRefetch();
-
-    // interval
-    const id = setInterval(() => {
-      if (!isMountedRef.current) return;
-      doRefetch();
-    }, pollIntervalMs);
-
-    // focus refetch
-    const onFocus = () => {
-      doRefetch();
-    };
-    window.addEventListener("focus", onFocus);
+    // Initial refresh after a short delay
+    const timeoutId = setTimeout(refreshData, 1000);
+    
+    // Set up polling
+    const intervalId = setInterval(refreshData, pollIntervalMs);
+    
+    // Refresh when window gets focus
+    window.addEventListener("focus", refreshData);
 
     return () => {
-      isMountedRef.current = false;
-      clearInterval(id);
-      window.removeEventListener("focus", onFocus);
+      clearTimeout(timeoutId);
+      clearInterval(intervalId);
+      window.removeEventListener("focus", refreshData);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [portfolioObjectId, lastTransactionDigest]);
+  }, [refetchPortfolioObject]);
 
-  // If AdminView updates the digest in localStorage (same domain), we can detect it via a storage event
+  // Loading state
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "lastTransactionDigest") {
-        if (e.newValue && e.newValue !== lastTransactionDigest) {
-          setLastTransactionDigest(e.newValue);
-        }
-      }
-      if (e.key === "portfolioObjectId") {
-        if (e.newValue && e.newValue !== portfolioObjectId) {
-          setPortfolioObjectId(e.newValue);
-        }
-      }
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastTransactionDigest, portfolioObjectId]);
+    setIsLoading(isFetchingObject);
+  }, [isFetchingObject]);
 
-  // Show a small UI indicator for loading if desired
+  // Debug logging
   useEffect(() => {
-    setIsLoading(isFetchingOwnedObjects || isFetchingObject || isFetchingTxBlock);
-  }, [isFetchingOwnedObjects, isFetchingObject, isFetchingTxBlock]);
+    console.log("Current state:", {
+      portfolioObjectId: PORTFOLIO_OBJECT_ID,
+      isLoading,
+      dataSource,
+      error,
+      hasPortfolioObject: !!portfolioObject,
+      portfolioObject
+    });
+  }, [isLoading, dataSource, error, portfolioObject]);
 
   return (
     <div className="font-inter">
-      {/* HERO SECTION */}
+      {/* HERO SECTION - KEEPING YOUR EXACT UI */}
       <div className="hero-wrapper">
         <div className="hero">
           <div className="avatar">
@@ -313,25 +255,68 @@ const PortfolioView: React.FC = () => {
               </a>
             </div>
 
-            <div className="mt-4 p-3 rounded-md">
-              {dataSource === "blockchain" && lastTransactionDigest ? (
+            {/* <div className="mt-4 p-3 rounded-md">
+              {dataSource === "blockchain" ? (
                 <div className="text-xs text-emerald-200">
-                  Latest on-chain update:{" "}
-                  <a
-                    href={`https://suiscan.xyz/testnet/tx/${lastTransactionDigest}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline text-blue-200"
-                  >
-                    {lastTransactionDigest.slice(0, 10)}...{lastTransactionDigest.slice(-6)}
-                  </a>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    <span className="font-semibold">✅ LIVE: On-chain Portfolio</span>
+                  </div>
+                  
+                  {lastTransactionDigest && (
+                    <div className="mb-1">
+                      <span className="text-blue-200">Latest Update: </span>
+                      <a
+                        href={`https://suiscan.xyz/testnet/tx/${lastTransactionDigest}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline text-blue-300 hover:text-blue-200 font-mono text-xs"
+                        title={lastTransactionDigest}
+                      >
+                        {lastTransactionDigest.slice(0, 10)}...{lastTransactionDigest.slice(-6)}
+                      </a>
+                    </div>
+                  )}
+                  
+                  <div className="mb-1">
+                    <span className="text-blue-200">Object ID: </span>
+                    <code className="text-blue-100 font-mono text-xs" title={PORTFOLIO_OBJECT_ID}>
+                      {PORTFOLIO_OBJECT_ID.slice(0, 10)}...{PORTFOLIO_OBJECT_ID.slice(-8)}
+                    </code>
+                  </div>
+                  
+                  <div className="text-green-300 text-xs">
+                    <span className="w-2 h-2 rounded-full bg-green-500 inline-block mr-1"></span>
+                    Auto-refreshing every 5 seconds
+                  </div>
+                </div>
+              ) : isLoading ? (
+                <div className="text-xs text-blue-300">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span>Loading on-chain portfolio...</span>
+                  </div>
+                  <div className="mt-1 text-blue-200 text-xs">
+                    Fetching: <code className="text-xs">{PORTFOLIO_OBJECT_ID.slice(0, 10)}...</code>
+                  </div>
                 </div>
               ) : (
                 <div className="text-xs text-gray-400">
-                  {isLoading ? "Checking chain for latest portfolio..." : "Portfolio shown from on-chain data when available"}
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                    <span>Using default portfolio data</span>
+                  </div>
+                  {error && (
+                    <div className="mt-1 text-xs text-yellow-500">
+                      {error}
+                    </div>
+                  )}
+                  <div className="mt-1 text-blue-200 text-xs">
+                    Object ID: <code className="text-xs">{PORTFOLIO_OBJECT_ID.slice(0, 10)}...</code>
+                  </div>
                 </div>
               )}
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
@@ -356,7 +341,9 @@ const PortfolioView: React.FC = () => {
           <div className="transaction-info">
             <div className="transaction-detail">
               <span className="detail-label">Transaction ID:</span>
-              <code className="detail-value">{`${lastTransactionDigest.slice(0, 12)}...${lastTransactionDigest.slice(-8)}`}</code>
+              <code className="detail-value" title={lastTransactionDigest}>
+                {lastTransactionDigest.slice(0, 12)}...{lastTransactionDigest.slice(-8)}
+              </code>
             </div>
             <div className="transaction-detail">
               <span className="detail-label">Status:</span>
@@ -364,7 +351,19 @@ const PortfolioView: React.FC = () => {
             </div>
             <div className="transaction-detail">
               <span className="detail-label">Data Source:</span>
-              <span className="detail-value">{dataSource === "blockchain" ? "Blockchain" : "Unknown"}</span>
+              <span className="detail-value">
+                {dataSource === "blockchain" ? (
+                  <span className="text-green-300">Blockchain (Live)</span>
+                ) : (
+                  "Unknown"
+                )}
+              </span>
+            </div>
+            <div className="transaction-detail">
+              <span className="detail-label">Object ID:</span>
+              <code className="detail-value" title={PORTFOLIO_OBJECT_ID}>
+                {PORTFOLIO_OBJECT_ID.slice(0, 12)}...{PORTFOLIO_OBJECT_ID.slice(-8)}
+              </code>
             </div>
             <a
               href={`https://suiscan.xyz/testnet/tx/${lastTransactionDigest}`}
@@ -396,7 +395,7 @@ const PortfolioView: React.FC = () => {
         </div>
       </div>
 
-      {/* FOOTER: logos preserved */}
+      {/* FOOTER */}
       <div className="custom-footer">
         <div className="footer-container">
           <div className="footer-logo-section">
@@ -409,11 +408,24 @@ const PortfolioView: React.FC = () => {
           <div className="footer-info-section">
             <div className="info-box">
               <div className="info-label">PROJECT ID:</div>
-              <div className="info-value" title={projectId}>
-                {projectId}
+              <div className="info-value" title={PACKAGE_ID}>
+                {PACKAGE_ID.slice(0, 10)}...{PACKAGE_ID.slice(-8)}
               </div>
             </div>
-            
+            {/* <div className="info-box mt-2">
+              <div className="info-label">PORTFOLIO OBJECT ID:</div>
+              <div className="info-value" title={PORTFOLIO_OBJECT_ID}>
+                {PORTFOLIO_OBJECT_ID.slice(0, 10)}...{PORTFOLIO_OBJECT_ID.slice(-8)}
+              </div>
+            </div> */}
+            {/* {dataSource === "blockchain" && (
+              <div className="mt-2 text-xs text-green-300 text-center">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                  <span>Live blockchain data • Auto-refreshing every 5 seconds</span>
+                </div>
+              </div>
+            )} */}
           </div>
         </div>
       </div>
@@ -440,6 +452,7 @@ const PortfolioView: React.FC = () => {
         .info-value { font-size:0.85rem; color:white; font-family:monospace; font-weight:500; overflow-wrap: break-word; word-wrap: break-word; word-break: break-all; }
         .footer-text { text-align:center; font-size:0.8rem; color:rgba(255,255,255,0.7); line-height:1.3; margin-top: 8px; width: 100%; max-width: 600px; }
         .loading { color:#93c5fd; animation:pulse 1.5s infinite; }
+        .mt-2 { margin-top: 0.5rem; }
         @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
         @media (min-width: 768px) {
           .footer-container { flex-direction: row; align-items: center; justify-content: space-between; }

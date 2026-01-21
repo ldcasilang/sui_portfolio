@@ -7,14 +7,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Portfolio App</title>
     
-    <!-- No CSP needed unless you have specific requirements -->
-    <!-- <meta http-equiv="Content-Security-Policy" 
-          content="script-src 'self' 'unsafe-inline' 'unsafe-eval';"> -->
+    <!-- ✅ META DESCRIPTION -->
+    <meta name="description" content="Move smart contracts are programs written in the Move language and deployed on blockchains like Sui, enabling secure asset management and high scalability.">
+    
+    <!-- ✅ OPEN GRAPH / SOCIAL MEDIA META TAGS -->
+    <meta property="og:title" content="Lady Diane Casilang | Move Smart Contract Portfolio">
+    <meta property="og:description" content="On-chain portfolio powered by Sui blockchain. Move smart contracts enable secure asset management and high scalability.">
+    <meta property="og:image" content="/portfolio-og-image.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:url" content="https://your-portfolio-url.com"> <!-- ⚠️ UPDATE THIS -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Sui Portfolio">
+    
+    <!-- ✅ TWITTER CARDS -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Lady Diane Casilang | Move Smart Contract Portfolio">
+    <meta name="twitter:description" content="On-chain portfolio powered by Sui blockchain. Move smart contracts enable secure asset management and high scalability.">
+    <meta name="twitter:image" content="/portfolio-og-image.jpg">
+    <meta name="twitter:image:alt" content="Lady Diane Casilang's blockchain portfolio">
     
     <!-- Optional: Only console logging, no alerts -->
     <script>
       document.addEventListener('DOMContentLoaded', function() {
-        // Simple check for debugging
         setTimeout(() => {
           const walletDetected = window.suietWallet || window.suiWallet;
           console.log('Wallet status:', walletDetected ? 'Detected' : 'Not detected');
