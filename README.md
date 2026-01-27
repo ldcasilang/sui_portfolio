@@ -18,9 +18,6 @@ This project combines:
 
 ## 🔗 Links
 
-**GitHub Repository:**  
-👉 https://github.com/ldcasilang/sui_portfolio_level2.git
-
 **Deployed Website:**  
 - Public Portfolio View:  
   👉 https://sui-folio.netlify.app  
